@@ -29,6 +29,7 @@ export default function Navigation() {
           <div className="flex items-center space-x-2">
             <NavLink href="/">Upload</NavLink>
             <NavLink href="/downloads">Downloads</NavLink>
+            <NavLink href="/music">Music</NavLink>
             <NavLink href="/about">About</NavLink>
           </div>
         </div>
