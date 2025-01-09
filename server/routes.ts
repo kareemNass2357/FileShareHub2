@@ -51,6 +51,32 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
+  // Preview file endpoint
+  app.get("/api/preview/:filename", (req: Request, res: Response) => {
+    const filename = req.params.filename;
+    const filepath = path.join(UPLOAD_DIR, filename);
+
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).send("File not found");
+    }
+
+    // For images and PDFs, stream the file directly
+    if (filename.match(/\.(jpg|jpeg|png|gif|webp|pdf)$/i)) {
+      res.sendFile(filepath);
+    } 
+    // For text files, read and send the content
+    else if (filename.match(/\.(txt|md|json|csv)$/i)) {
+      fs.readFile(filepath, 'utf8', (err, data) => {
+        if (err) {
+          return res.status(500).send("Error reading file");
+        }
+        res.send(data);
+      });
+    } else {
+      res.status(415).send("File type not supported for preview");
+    }
+  });
+
   // Download file endpoint
   app.get("/api/download/:filename", (req: Request, res: Response) => {
     const filename = req.params.filename;
