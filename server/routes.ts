@@ -13,6 +13,17 @@ const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
 const SESSION_SECRET = process.env.SESSION_SECRET || "development_secret";
 const DOWNLOADS_PASSWORD = process.env.DOWNLOADS_PASSWORD;
 
+// Supported audio MIME types
+const SUPPORTED_AUDIO_TYPES = [
+  'audio/mpeg',  // .mp3
+  'audio/wav',   // .wav
+  'audio/ogg',   // .ogg
+  'audio/aac',   // .aac
+  'audio/midi',  // .midi
+  'audio/x-m4a', // .m4a
+  'audio/webm',  // .weba
+];
+
 if (!DOWNLOADS_PASSWORD) {
   throw new Error("DOWNLOADS_PASSWORD environment variable must be set");
 }
@@ -30,8 +41,8 @@ const shareLinks = new Map<string, string>();
 
 const fileStorage = multer.diskStorage({
   destination: (req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-    // If it's a music file, store in music directory
-    if (file.mimetype.startsWith('audio/')) {
+    // Check if it's an audio file by checking the MIME type
+    if (SUPPORTED_AUDIO_TYPES.includes(file.mimetype)) {
       cb(null, MUSIC_DIR);
     } else {
       cb(null, UPLOAD_DIR);
@@ -42,7 +53,21 @@ const fileStorage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: fileStorage });
+// Add file filter to multer configuration
+const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (req.path === '/api/upload' && SUPPORTED_AUDIO_TYPES.includes(file.mimetype)) {
+    cb(null, true);
+  } else if (req.path === '/api/upload') {
+    cb(new Error('Invalid file type. Only audio files are allowed.'));
+  } else {
+    cb(null, true);
+  }
+};
+
+const upload = multer({ 
+  storage: fileStorage,
+  fileFilter: fileFilter
+});
 
 function generateShareId(): string {
   return crypto.randomBytes(8).toString('hex');
