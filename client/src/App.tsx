@@ -3,6 +3,7 @@ import Navigation from "@/components/Navigation";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
 import Downloads from "@/pages/Downloads";
+import Login from "@/pages/Login";
 import { AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -15,6 +16,7 @@ function App() {
           <Route path="/" component={Home} />
           <Route path="/about" component={About} />
           <Route path="/downloads" component={Downloads} />
+          <Route path="/login" component={Login} />
           <Route component={NotFound} />
         </Switch>
       </main>

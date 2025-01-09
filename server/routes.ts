@@ -4,8 +4,17 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import session from "express-session";
+import { requireAuth } from "./middleware";
+import MemoryStore from "memorystore";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const SESSION_SECRET = process.env.SESSION_SECRET || "development_secret";
+const DOWNLOADS_PASSWORD = process.env.DOWNLOADS_PASSWORD;
+
+if (!DOWNLOADS_PASSWORD) {
+  throw new Error("DOWNLOADS_PASSWORD environment variable must be set");
+}
 
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -31,16 +40,40 @@ function generateShareId(): string {
 }
 
 export function registerRoutes(app: Express): Server {
-  // File upload endpoint
-  app.post("/api/upload", upload.single("file"), (req: Request, res: Response) => {
-    if (!req.file) {
-      return res.status(400).send("No file uploaded");
+  // Session middleware setup
+  const MemorySessionStore = MemoryStore(session);
+  app.use(
+    session({
+      cookie: { maxAge: 86400000 }, // 24 hours
+      store: new MemorySessionStore({
+        checkPeriod: 86400000, // prune expired entries every 24h
+      }),
+      resave: false,
+      secret: SESSION_SECRET,
+      saveUninitialized: false,
+    })
+  );
+
+  // Authentication endpoint
+  app.post("/api/auth/login", (req: Request, res: Response) => {
+    const { password } = req.body;
+
+    if (password === DOWNLOADS_PASSWORD) {
+      req.session.authenticated = true;
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ success: false, message: "Invalid password" });
     }
-    res.json({ success: true, filename: req.file.filename });
   });
 
-  // Get list of files
-  app.get("/api/files", (_req: Request, res: Response) => {
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    req.session.destroy(() => {
+      res.json({ success: true });
+    });
+  });
+
+  // Protected file listing endpoint
+  app.get("/api/files", requireAuth, (_req: Request, res: Response) => {
     fs.readdir(UPLOAD_DIR, (err, files) => {
       if (err) {
         return res.status(500).send("Error reading files directory");
@@ -61,6 +94,14 @@ export function registerRoutes(app: Express): Server {
 
       res.json(fileList);
     });
+  });
+
+  // File upload endpoint
+  app.post("/api/upload", upload.single("file"), (req: Request, res: Response) => {
+    if (!req.file) {
+      return res.status(400).send("No file uploaded");
+    }
+    res.json({ success: true, filename: req.file.filename });
   });
 
   // Create share link
@@ -116,7 +157,7 @@ export function registerRoutes(app: Express): Server {
     // For images and PDFs, stream the file directly
     if (filename.match(/\.(jpg|jpeg|png|gif|webp|pdf)$/i)) {
       res.sendFile(filepath);
-    } 
+    }
     // For text files, read and send the content
     else if (filename.match(/\.(txt|md|json|csv)$/i)) {
       fs.readFile(filepath, 'utf8', (err, data) => {
