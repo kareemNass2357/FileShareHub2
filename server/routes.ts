@@ -9,6 +9,7 @@ import { requireAuth } from "./middleware";
 import MemoryStore from "memorystore";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
 const SESSION_SECRET = process.env.SESSION_SECRET || "development_secret";
 const DOWNLOADS_PASSWORD = process.env.DOWNLOADS_PASSWORD;
 
@@ -16,24 +17,32 @@ if (!DOWNLOADS_PASSWORD) {
   throw new Error("DOWNLOADS_PASSWORD environment variable must be set");
 }
 
-// Ensure uploads directory exists
+// Ensure uploads and music directories exist
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+if (!fs.existsSync(MUSIC_DIR)) {
+  fs.mkdirSync(MUSIC_DIR, { recursive: true });
 }
 
 // In-memory map to store share links (in production, this should be in a database)
 const shareLinks = new Map<string, string>();
 
-const storage = multer.diskStorage({
-  destination: (_req: Express.Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-    cb(null, UPLOAD_DIR);
+const fileStorage = multer.diskStorage({
+  destination: (req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+    // If it's a music file, store in music directory
+    if (file.mimetype.startsWith('audio/')) {
+      cb(null, MUSIC_DIR);
+    } else {
+      cb(null, UPLOAD_DIR);
+    }
   },
   filename: (_req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage: fileStorage });
 
 function generateShareId(): string {
   return crypto.randomBytes(8).toString('hex');
@@ -53,6 +62,63 @@ export function registerRoutes(app: Express): Server {
       saveUninitialized: false,
     })
   );
+
+  // Get music files list
+  app.get("/api/music", (_req: Request, res: Response) => {
+    fs.readdir(MUSIC_DIR, (err, files) => {
+      if (err) {
+        return res.status(500).send("Error reading music directory");
+      }
+
+      const musicFiles = files.map(filename => {
+        const stats = fs.statSync(path.join(MUSIC_DIR, filename));
+        return {
+          name: filename,
+          size: stats.size,
+          uploadDate: stats.mtime,
+        };
+      });
+
+      res.json(musicFiles);
+    });
+  });
+
+  // Stream music file
+  app.get("/api/music/:filename", (req: Request, res: Response) => {
+    const filename = req.params.filename;
+    const filePath = path.join(MUSIC_DIR, filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send("File not found");
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+      const file = fs.createReadStream(filePath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'audio/mpeg',
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': 'audio/mpeg',
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(filePath).pipe(res);
+    }
+  });
 
   // Authentication endpoint
   app.post("/api/auth/login", (req: Request, res: Response) => {
