@@ -1,23 +1,23 @@
-import { Router, Route, Link } from "react-router-dom";
-import Home from "@/app/page";
-import FileUpload from "@/components/FileUpload";
-import MusicPlayerPage from "@/components/MusicPlayerPage";
+import { Route, Link } from "wouter";
+import { useState } from "react";
+import Navigation from "@/components/Navigation";
+import Home from "@/pages/Home";
+import MusicPlayerPage from "@/pages/MusicPlayerPage";
+import About from "@/pages/About";
+import Downloads from "@/pages/Downloads";
+import Login from "@/pages/Login";
 
 export default function RootLayout() {
   return (
-    <Router>
-      <div className="app-container">
-        <header className="app-header">
-          <Link href="/">Home</Link>
-          <Link href="/upload">Upload</Link>
-          <Link href="/music-player">Music Player</Link>
-        </header>
-        <main className="app-main">
-          <Route path="/" element={<Home />} />
-          <Route path="/upload" element={<FileUpload />} />
-          <Route path="/music-player" element={<MusicPlayerPage />} />
-        </main>
-      </div>
-    </Router>
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="container mx-auto px-4 py-8">
+        <Route path="/" component={Home} />
+        <Route path="/about" component={About} />
+        <Route path="/downloads" component={Downloads} />
+        <Route path="/login" component={Login} />
+        <Route path="/music" component={MusicPlayerPage} />
+      </main>
+    </div>
   );
 }
