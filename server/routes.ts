@@ -7,6 +7,9 @@ import crypto from "crypto";
 import session from "express-session";
 import { requireAuth } from "./middleware";
 import MemoryStore from "memorystore";
+import ytdl from "ytdl-core";
+import ffmpeg from "ffmpeg-static";
+import { spawn } from "child_process";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
@@ -272,6 +275,70 @@ export function registerRoutes(app: Express): Server {
     }
 
     res.download(filepath);
+  });
+
+  // YouTube to MP3 conversion endpoint
+  app.post("/api/youtube/convert", async (req: Request, res: Response) => {
+    try {
+      const { url } = req.body;
+
+      if (!url) {
+        return res.status(400).send("YouTube URL is required");
+      }
+
+      // Validate YouTube URL
+      if (!ytdl.validateURL(url)) {
+        return res.status(400).send("Invalid YouTube URL");
+      }
+
+      // Get video info
+      const info = await ytdl.getInfo(url);
+      const videoTitle = info.videoDetails.title.replace(/[^\w\s]/gi, '');
+
+      // Create temporary files for processing
+      const audioOutput = path.join(UPLOAD_DIR, `${Date.now()}-${videoTitle}.mp3`);
+
+      // Download audio stream
+      const audioStream = ytdl(url, {
+        quality: 'highestaudio',
+        filter: 'audioonly'
+      });
+
+      // Use FFmpeg to convert to MP3
+      const ffmpegProcess = spawn(ffmpeg as string, [
+        '-i', 'pipe:0',
+        '-f', 'mp3',
+        '-ab', '128k',
+        '-vn',
+        audioOutput
+      ]);
+
+      audioStream.pipe(ffmpegProcess.stdin);
+
+      ffmpegProcess.on('close', () => {
+        // Stream the file to client
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Content-Disposition', `attachment; filename="${videoTitle}.mp3"`);
+
+        const fileStream = fs.createReadStream(audioOutput);
+        fileStream.pipe(res);
+
+        // Clean up after streaming
+        fileStream.on('end', () => {
+          fs.unlink(audioOutput, (err) => {
+            if (err) console.error('Error cleaning up temp file:', err);
+          });
+        });
+      });
+
+      ffmpegProcess.stderr.on('data', (data) => {
+        console.log(`FFmpeg stderr: ${data}`);
+      });
+
+    } catch (error) {
+      console.error('Error in YouTube conversion:', error);
+      res.status(500).send(error instanceof Error ? error.message : 'Internal server error');
+    }
   });
 
   const httpServer = createServer(app);

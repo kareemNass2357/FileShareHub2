@@ -5,6 +5,7 @@ import About from "@/pages/About";
 import Downloads from "@/pages/Downloads";
 import Login from "@/pages/Login";
 import MusicPlayerPage from "@/pages/MusicPlayerPage";
+import YouTubeConverter from "@/pages/YouTubeConverter";
 import { AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -19,6 +20,7 @@ function App() {
           <Route path="/downloads" component={Downloads} />
           <Route path="/login" component={Login} />
           <Route path="/music" component={MusicPlayerPage} />
+          <Route path="/youtube-converter" component={YouTubeConverter} />
           <Route component={NotFound} />
         </Switch>
       </main>
