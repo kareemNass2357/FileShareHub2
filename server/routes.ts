@@ -7,7 +7,7 @@ import crypto from "crypto";
 import session from "express-session";
 import { requireAuth } from "./middleware";
 import MemoryStore from "memorystore";
-import ytdl from "ytdl-core";
+import youtubeDl from "youtube-dl-exec";
 import ffmpeg from "ffmpeg-static";
 import { spawn } from "child_process";
 
@@ -286,53 +286,38 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send("YouTube URL is required");
       }
 
-      // Validate YouTube URL
-      if (!ytdl.validateURL(url)) {
-        return res.status(400).send("Invalid YouTube URL");
+      // Create temporary files for processing
+      const tempDir = path.join(UPLOAD_DIR, 'temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
       }
 
-      // Get video info
-      const info = await ytdl.getInfo(url);
-      const videoTitle = info.videoDetails.title.replace(/[^\w\s]/gi, '');
+      const outputPath = path.join(tempDir, `${Date.now()}.mp3`);
 
-      // Create temporary files for processing
-      const audioOutput = path.join(UPLOAD_DIR, `${Date.now()}-${videoTitle}.mp3`);
-
-      // Download audio stream
-      const audioStream = ytdl(url, {
-        quality: 'highestaudio',
-        filter: 'audioonly'
+      // Download and convert to MP3
+      await youtubeDl(url, {
+        extractAudio: true,
+        audioFormat: 'mp3',
+        audioQuality: 0, // Best quality
+        output: outputPath,
+        noCheckCertificates: true,
+        noWarnings: true,
+        preferFreeFormats: true,
+        addHeader: ['referer:youtube.com', 'user-agent:googlebot']
       });
 
-      // Use FFmpeg to convert to MP3
-      const ffmpegProcess = spawn(ffmpeg as string, [
-        '-i', 'pipe:0',
-        '-f', 'mp3',
-        '-ab', '128k',
-        '-vn',
-        audioOutput
-      ]);
+      // Stream the file to client
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(outputPath)}"`);
 
-      audioStream.pipe(ffmpegProcess.stdin);
+      const fileStream = fs.createReadStream(outputPath);
+      fileStream.pipe(res);
 
-      ffmpegProcess.on('close', () => {
-        // Stream the file to client
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('Content-Disposition', `attachment; filename="${videoTitle}.mp3"`);
-
-        const fileStream = fs.createReadStream(audioOutput);
-        fileStream.pipe(res);
-
-        // Clean up after streaming
-        fileStream.on('end', () => {
-          fs.unlink(audioOutput, (err) => {
-            if (err) console.error('Error cleaning up temp file:', err);
-          });
+      // Clean up after streaming
+      fileStream.on('end', () => {
+        fs.unlink(outputPath, (err) => {
+          if (err) console.error('Error cleaning up temp file:', err);
         });
-      });
-
-      ffmpegProcess.stderr.on('data', (data) => {
-        console.log(`FFmpeg stderr: ${data}`);
       });
 
     } catch (error) {
