@@ -6,16 +6,16 @@ export default function Navigation() {
 
   const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
     <Link href={href}>
-      <a
+      <span
         className={cn(
-          "px-4 py-2 rounded-md text-sm font-medium transition-colors",
+          "px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer",
           location === href
             ? "bg-primary text-primary-foreground"
             : "hover:bg-primary/10"
         )}
       >
         {children}
-      </a>
+      </span>
     </Link>
   );
 
@@ -24,12 +24,13 @@ export default function Navigation() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/">
-            <a className="text-xl font-bold">FileShare</a>
+            <span className="text-xl font-bold cursor-pointer">FileShare</span>
           </Link>
           <div className="flex items-center space-x-2">
             <NavLink href="/">Upload</NavLink>
             <NavLink href="/downloads">Downloads</NavLink>
             <NavLink href="/music">Music</NavLink>
+            <NavLink href="/youtube-converter">YouTube to MP3</NavLink>
             <NavLink href="/about">About</NavLink>
           </div>
         </div>
