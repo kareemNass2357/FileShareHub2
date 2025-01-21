@@ -10,19 +10,8 @@ import MemoryStore from "memorystore";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
-const NOTES_FILE = path.join(process.cwd(), "data", "notes.json");
 const SESSION_SECRET = process.env.SESSION_SECRET || "development_secret";
 const AUTH_PASSWORD = "123456"; //Hardcoded for example, should be environment variable
-
-// Ensure data directory exists
-if (!fs.existsSync(path.dirname(NOTES_FILE))) {
-  fs.mkdirSync(path.dirname(NOTES_FILE), { recursive: true });
-}
-
-// Initialize notes file if it doesn't exist
-if (!fs.existsSync(NOTES_FILE)) {
-  fs.writeFileSync(NOTES_FILE, JSON.stringify({ notes: [] }));
-}
 
 // Supported audio MIME types
 const SUPPORTED_AUDIO_TYPES = [
@@ -76,7 +65,7 @@ const musicFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: m
 };
 
 const upload = multer({ storage: fileStorage });
-const musicUpload = multer({
+const musicUpload = multer({ 
   storage: musicStorage,
   fileFilter: musicFileFilter
 });
@@ -323,38 +312,6 @@ export function registerRoutes(app: Express): Server {
 
     res.download(filepath);
   });
-
-  // Notes endpoint
-  app.post("/api/notes", async (req: Request, res: Response) => {
-    try {
-      const { content } = req.body;
-
-      if (!content || typeof content !== 'string' || content.trim().length === 0) {
-        return res.status(400).json({ message: "Note content is required" });
-      }
-
-      // Read existing notes
-      const notesData = JSON.parse(fs.readFileSync(NOTES_FILE, 'utf-8'));
-
-      // Add new note
-      const newNote = {
-        id: crypto.randomBytes(16).toString('hex'),
-        content: content.trim(),
-        createdAt: new Date().toISOString()
-      };
-
-      notesData.notes.push(newNote);
-
-      // Save updated notes
-      fs.writeFileSync(NOTES_FILE, JSON.stringify(notesData, null, 2));
-
-      res.status(201).json({ success: true, note: newNote });
-    } catch (error) {
-      console.error('Error saving note:', error);
-      res.status(500).json({ message: "Failed to save note" });
-    }
-  });
-
 
   const httpServer = createServer(app);
   return httpServer;
