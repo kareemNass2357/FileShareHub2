@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
@@ -9,6 +10,31 @@ import { AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const res = await fetch("/api/auth/status");
+      const data = await res.json();
+      setIsAuthenticated(data.authenticated);
+    } catch (error) {
+      console.error("Failed to check auth status:", error);
+      setIsAuthenticated(false);
+    }
+  };
+
+  if (isAuthenticated === null) {
+    return null; // Loading state
+  }
+
+  if (!isAuthenticated) {
+    return <Login onSuccess={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -17,7 +43,6 @@ function App() {
           <Route path="/" component={Home} />
           <Route path="/about" component={About} />
           <Route path="/downloads" component={Downloads} />
-          <Route path="/login" component={Login} />
           <Route path="/music" component={MusicPlayerPage} />
           <Route component={NotFound} />
         </Switch>
