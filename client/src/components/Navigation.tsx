@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LogOut } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function Navigation() {
   const [location, setLocation] = useLocation();
@@ -75,17 +76,20 @@ export default function Navigation() {
             <NavLink href="/about">About</NavLink>
           </div>
         </div>
-        {authStatus?.isAuthenticated && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
-        )}
+        <div className="flex items-center space-x-2">
+          <ThemeToggle />
+          {authStatus?.isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          )}
+        </div>
       </div>
     </nav>
   );
