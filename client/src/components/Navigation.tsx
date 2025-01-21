@@ -12,17 +12,17 @@ export default function Navigation() {
   const queryClient = useQueryClient();
 
   const { data: authStatus } = useQuery<{ isAuthenticated: boolean }>({
-    queryKey: ["/api/music/auth-status"],
+    queryKey: ["/api/auth-status"],
   });
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("/api/music/logout", {
+      const res = await fetch("/api/auth/logout", {
         method: "POST",
       });
 
       if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: ["/api/music/auth-status"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth-status"] });
         toast({
           title: "Success",
           description: "Logged out successfully",

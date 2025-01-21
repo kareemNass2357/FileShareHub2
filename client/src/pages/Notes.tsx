@@ -18,7 +18,7 @@ export default function Notes() {
 
   // Query for authentication status
   const { data: authStatus } = useQuery<{ isAuthenticated: boolean }>({
-    queryKey: ["/api/music/auth-status"],
+    queryKey: ["/api/auth-status"],
   });
 
   // Query for notes

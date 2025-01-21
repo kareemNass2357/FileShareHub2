@@ -100,17 +100,13 @@ export function registerRoutes(app: Express): Server {
     })
   );
 
-  // Check if user is authenticated middleware
-  const requireMusicAuth = (req: Request, res: Response, next: NextFunction) => {
-    if (req.session.authenticated) {
-      next();
-    } else {
-      res.status(401).send("Unauthorized");
-    }
-  };
+  // Authentication status endpoint
+  app.get("/api/auth-status", (req: Request, res: Response) => {
+    res.json({ isAuthenticated: !!req.session.authenticated });
+  });
 
-  // Music authentication endpoints
-  app.post("/api/music/login", (req: Request, res: Response) => {
+  // Authentication endpoint
+  app.post("/api/auth/login", (req: Request, res: Response) => {
     const { password } = req.body;
 
     if (password === AUTH_PASSWORD) {
@@ -121,15 +117,21 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/music/logout", (req: Request, res: Response) => {
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
     req.session.authenticated = false;
     res.json({ success: true });
   });
 
-  // Get authentication status
-  app.get("/api/music/auth-status", (req: Request, res: Response) => {
-    res.json({ isAuthenticated: !!req.session.authenticated });
-  });
+  // Check if user is authenticated middleware
+  const requireMusicAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (req.session.authenticated) {
+      next();
+    } else {
+      res.status(401).send("Unauthorized");
+    }
+  };
+
+  // Music authentication endpoints (removed /api/music prefix)
 
   // Protect music endpoints
   app.get("/api/music", requireMusicAuth, (_req: Request, res: Response) => {
@@ -196,22 +198,6 @@ export function registerRoutes(app: Express): Server {
     res.json({ success: true, filename: req.file.filename });
   });
 
-  // Authentication endpoint
-  app.post("/api/auth/login", (req: Request, res: Response) => {
-    const { password } = req.body;
-
-    if (password === AUTH_PASSWORD) {
-      req.session.authenticated = true;
-      res.json({ success: true });
-    } else {
-      res.status(401).json({ success: false, message: "Invalid password" });
-    }
-  });
-
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
-    req.session.authenticated = false;
-    res.json({ success: true });
-  });
 
   // Protected file listing endpoint
   app.get("/api/files", requireAuth, (_req: Request, res: Response) => {
