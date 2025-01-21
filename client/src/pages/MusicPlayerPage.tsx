@@ -1,15 +1,28 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import MusicPlayer from "@/components/MusicPlayer";
 import { Progress } from "@/components/ui/progress";
 import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 export default function MusicPlayerPage() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  // Check authentication status
+  const { data: authStatus, isLoading } = useQuery<{ isAuthenticated: boolean }>({
+    queryKey: ["/api/music/auth-status"],
+  });
+
+  // Redirect to login if not authenticated
+  if (!isLoading && !authStatus?.isAuthenticated) {
+    setLocation("/login");
+    return null;
+  }
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -67,6 +80,10 @@ export default function MusicPlayerPage() {
       setProgress(0);
     }
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-8">

@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -16,7 +17,7 @@ import {
   Volume2,
   VolumeX
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { usePlayer } from "@/hooks/use-player";
 
@@ -36,6 +37,8 @@ export default function MusicPlayer() {
   const [currentTrack, setCurrentTrack] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const {
     isPlaying,
@@ -50,8 +53,15 @@ export default function MusicPlayer() {
     setVolume,
   } = usePlayer(audioRef);
 
-  const { data: musicFiles = [] } = useQuery<MusicFile[]>({
+  const { data: musicFiles = [], error } = useQuery<MusicFile[]>({
     queryKey: ["/api/music"],
+    onError: (error: Error) => {
+      if (error.message.includes("401")) {
+        // Session expired or unauthorized
+        queryClient.invalidateQueries({ queryKey: ["/api/music/auth-status"] });
+        setLocation("/login");
+      }
+    },
   });
 
   const handlePlay = (filename: string) => {
@@ -78,6 +88,14 @@ export default function MusicPlayer() {
 
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   };
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Error loading music files
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

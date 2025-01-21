@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
@@ -11,7 +11,7 @@ import MemoryStore from "memorystore";
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
 const SESSION_SECRET = process.env.SESSION_SECRET || "development_secret";
-const DOWNLOADS_PASSWORD = process.env.DOWNLOADS_PASSWORD;
+const MUSIC_PASSWORD = process.env.MUSIC_PASSWORD || "music123";
 
 // Supported audio MIME types
 const SUPPORTED_AUDIO_TYPES = [
@@ -24,8 +24,8 @@ const SUPPORTED_AUDIO_TYPES = [
   'audio/webm',  // .weba
 ];
 
-if (!DOWNLOADS_PASSWORD) {
-  throw new Error("DOWNLOADS_PASSWORD environment variable must be set");
+if (!MUSIC_PASSWORD) {
+  throw new Error("MUSIC_PASSWORD environment variable must be set");
 }
 
 // Ensure uploads and music directories exist
@@ -93,8 +93,39 @@ export function registerRoutes(app: Express): Server {
     })
   );
 
-  // Get music files list
-  app.get("/api/music", (_req: Request, res: Response) => {
+  // Check if user is authenticated middleware
+  const requireMusicAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (req.session.musicAuthenticated) {
+      next();
+    } else {
+      res.status(401).send("Unauthorized");
+    }
+  };
+
+  // Music authentication endpoints
+  app.post("/api/music/login", (req: Request, res: Response) => {
+    const { password } = req.body;
+
+    if (password === MUSIC_PASSWORD) {
+      req.session.musicAuthenticated = true;
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ success: false, message: "Invalid password" });
+    }
+  });
+
+  app.post("/api/music/logout", (req: Request, res: Response) => {
+    req.session.musicAuthenticated = false;
+    res.json({ success: true });
+  });
+
+  // Get authentication status
+  app.get("/api/music/auth-status", (req: Request, res: Response) => {
+    res.json({ isAuthenticated: !!req.session.musicAuthenticated });
+  });
+
+  // Protect music endpoints
+  app.get("/api/music", requireMusicAuth, (_req: Request, res: Response) => {
     fs.readdir(MUSIC_DIR, (err, files) => {
       if (err) {
         return res.status(500).send("Error reading music directory");
@@ -114,7 +145,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Stream music file
-  app.get("/api/music/:filename", (req: Request, res: Response) => {
+  app.get("/api/music/:filename", requireMusicAuth, (req: Request, res: Response) => {
     const filename = req.params.filename;
     const filePath = path.join(MUSIC_DIR, filename);
 
@@ -150,8 +181,9 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+
   // Upload music file endpoint
-  app.post("/api/music/upload", musicUpload.single("file"), (req: Request, res: Response) => {
+  app.post("/api/music/upload", requireMusicAuth, musicUpload.single("file"), (req: Request, res: Response) => {
     if (!req.file) {
       return res.status(400).send("No file uploaded");
     }
