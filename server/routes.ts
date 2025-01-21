@@ -12,6 +12,7 @@ const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
 const SESSION_SECRET = process.env.SESSION_SECRET || "development_secret";
 const MUSIC_PASSWORD = process.env.MUSIC_PASSWORD || "music123";
+const DOWNLOADS_PASSWORD = process.env.DOWNLOADS_PASSWORD || "downloads123";
 
 // Supported audio MIME types
 const SUPPORTED_AUDIO_TYPES = [
