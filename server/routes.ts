@@ -7,9 +7,6 @@ import crypto from "crypto";
 import session from "express-session";
 import { requireAuth } from "./middleware";
 import MemoryStore from "memorystore";
-import youtubeDl from "youtube-dl-exec";
-import ffmpeg from "ffmpeg-static";
-import { spawn } from "child_process";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
@@ -275,55 +272,6 @@ export function registerRoutes(app: Express): Server {
     }
 
     res.download(filepath);
-  });
-
-  // YouTube to MP3 conversion endpoint
-  app.post("/api/youtube/convert", async (req: Request, res: Response) => {
-    try {
-      const { url } = req.body;
-
-      if (!url) {
-        return res.status(400).send("YouTube URL is required");
-      }
-
-      // Create temporary files for processing
-      const tempDir = path.join(UPLOAD_DIR, 'temp');
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
-
-      const outputPath = path.join(tempDir, `${Date.now()}.mp3`);
-
-      // Download and convert to MP3
-      await youtubeDl(url, {
-        extractAudio: true,
-        audioFormat: 'mp3',
-        audioQuality: 0, // Best quality
-        output: outputPath,
-        noCheckCertificates: true,
-        noWarnings: true,
-        preferFreeFormats: true,
-        addHeader: ['referer:youtube.com', 'user-agent:googlebot']
-      });
-
-      // Stream the file to client
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(outputPath)}"`);
-
-      const fileStream = fs.createReadStream(outputPath);
-      fileStream.pipe(res);
-
-      // Clean up after streaming
-      fileStream.on('end', () => {
-        fs.unlink(outputPath, (err) => {
-          if (err) console.error('Error cleaning up temp file:', err);
-        });
-      });
-
-    } catch (error) {
-      console.error('Error in YouTube conversion:', error);
-      res.status(500).send(error instanceof Error ? error.message : 'Internal server error');
-    }
   });
 
   const httpServer = createServer(app);
