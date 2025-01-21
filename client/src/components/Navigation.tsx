@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LogOut } from "lucide-react";
 
 export default function Navigation() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -26,6 +26,8 @@ export default function Navigation() {
           title: "Success",
           description: "Logged out successfully",
         });
+        // Force page refresh after logout
+        window.location.href = '/';
       } else {
         throw new Error("Logout failed");
       }
@@ -62,7 +64,9 @@ export default function Navigation() {
           </Link>
           <div className="flex items-center space-x-2">
             <NavLink href="/">Upload</NavLink>
-            <NavLink href="/downloads">Downloads</NavLink>
+            {authStatus?.isAuthenticated && (
+              <NavLink href="/downloads">Downloads</NavLink>
+            )}
             {authStatus?.isAuthenticated ? (
               <NavLink href="/music">Music</NavLink>
             ) : (
