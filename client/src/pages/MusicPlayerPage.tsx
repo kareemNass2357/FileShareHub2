@@ -1,6 +1,5 @@
 import { useState } from "react";
 import MusicPlayer from "@/components/MusicPlayer";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -56,7 +55,7 @@ export default function MusicPlayerPage() {
         throw new Error("Upload failed");
       };
 
-      xhr.open("POST", "/api/upload");
+      xhr.open("POST", "/api/music/upload");
       xhr.send(formData);
     } catch (error) {
       toast({

@@ -39,34 +39,39 @@ if (!fs.existsSync(MUSIC_DIR)) {
 // In-memory map to store share links (in production, this should be in a database)
 const shareLinks = new Map<string, string>();
 
+// Storage configuration for general files
 const fileStorage = multer.diskStorage({
-  destination: (req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-    // Check if it's an audio file by checking the MIME type
-    if (SUPPORTED_AUDIO_TYPES.includes(file.mimetype)) {
-      cb(null, MUSIC_DIR);
-    } else {
-      cb(null, UPLOAD_DIR);
-    }
+  destination: (_req: Express.Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+    cb(null, UPLOAD_DIR);
   },
   filename: (_req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
 
-// Add file filter to multer configuration
-const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (req.path === '/api/upload' && SUPPORTED_AUDIO_TYPES.includes(file.mimetype)) {
+// Storage configuration for music files
+const musicStorage = multer.diskStorage({
+  destination: (_req: Express.Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+    cb(null, MUSIC_DIR);
+  },
+  filename: (_req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+
+// Music file filter
+const musicFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (SUPPORTED_AUDIO_TYPES.includes(file.mimetype)) {
     cb(null, true);
-  } else if (req.path === '/api/upload') {
-    cb(new Error('Invalid file type. Only audio files are allowed.'));
   } else {
-    cb(null, true);
+    cb(new Error('Invalid file type. Only audio files are allowed.'));
   }
 };
 
-const upload = multer({ 
-  storage: fileStorage,
-  fileFilter: fileFilter
+const upload = multer({ storage: fileStorage });
+const musicUpload = multer({ 
+  storage: musicStorage,
+  fileFilter: musicFileFilter
 });
 
 function generateShareId(): string {
@@ -145,6 +150,14 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Upload music file endpoint
+  app.post("/api/music/upload", musicUpload.single("file"), (req: Request, res: Response) => {
+    if (!req.file) {
+      return res.status(400).send("No file uploaded");
+    }
+    res.json({ success: true, filename: req.file.filename });
+  });
+
   // Authentication endpoint
   app.post("/api/auth/login", (req: Request, res: Response) => {
     const { password } = req.body;
@@ -187,7 +200,7 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
-  // File upload endpoint
+  // General file upload endpoint
   app.post("/api/upload", upload.single("file"), (req: Request, res: Response) => {
     if (!req.file) {
       return res.status(400).send("No file uploaded");
