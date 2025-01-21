@@ -11,8 +11,7 @@ import MemoryStore from "memorystore";
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
 const SESSION_SECRET = process.env.SESSION_SECRET || "development_secret";
-const MUSIC_PASSWORD = process.env.MUSIC_PASSWORD || "music123";
-const DOWNLOADS_PASSWORD = process.env.DOWNLOADS_PASSWORD || "downloads123";
+const AUTH_PASSWORD = "123456"; //Hardcoded for example, should be environment variable
 
 // Supported audio MIME types
 const SUPPORTED_AUDIO_TYPES = [
@@ -24,10 +23,6 @@ const SUPPORTED_AUDIO_TYPES = [
   'audio/x-m4a', // .m4a
   'audio/webm',  // .weba
 ];
-
-if (!MUSIC_PASSWORD) {
-  throw new Error("MUSIC_PASSWORD environment variable must be set");
-}
 
 // Ensure uploads and music directories exist
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -96,7 +91,7 @@ export function registerRoutes(app: Express): Server {
 
   // Check if user is authenticated middleware
   const requireMusicAuth = (req: Request, res: Response, next: NextFunction) => {
-    if (req.session.musicAuthenticated) {
+    if (req.session.authenticated) {
       next();
     } else {
       res.status(401).send("Unauthorized");
@@ -107,8 +102,8 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/music/login", (req: Request, res: Response) => {
     const { password } = req.body;
 
-    if (password === MUSIC_PASSWORD) {
-      req.session.musicAuthenticated = true;
+    if (password === AUTH_PASSWORD) {
+      req.session.authenticated = true;
       res.json({ success: true });
     } else {
       res.status(401).json({ success: false, message: "Invalid password" });
@@ -116,13 +111,13 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/music/logout", (req: Request, res: Response) => {
-    req.session.musicAuthenticated = false;
+    req.session.authenticated = false;
     res.json({ success: true });
   });
 
   // Get authentication status
   app.get("/api/music/auth-status", (req: Request, res: Response) => {
-    res.json({ isAuthenticated: !!req.session.musicAuthenticated });
+    res.json({ isAuthenticated: !!req.session.authenticated });
   });
 
   // Protect music endpoints
@@ -182,7 +177,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-
   // Upload music file endpoint
   app.post("/api/music/upload", requireMusicAuth, musicUpload.single("file"), (req: Request, res: Response) => {
     if (!req.file) {
@@ -195,7 +189,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/auth/login", (req: Request, res: Response) => {
     const { password } = req.body;
 
-    if (password === DOWNLOADS_PASSWORD) {
+    if (password === AUTH_PASSWORD) {
       req.session.authenticated = true;
       res.json({ success: true });
     } else {
@@ -204,9 +198,8 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/auth/logout", (req: Request, res: Response) => {
-    req.session.destroy(() => {
-      res.json({ success: true });
-    });
+    req.session.authenticated = false;
+    res.json({ success: true });
   });
 
   // Protected file listing endpoint
