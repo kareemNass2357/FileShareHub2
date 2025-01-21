@@ -65,26 +65,13 @@ const musicFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: m
 };
 
 const upload = multer({ storage: fileStorage });
-const musicUpload = multer({
+const musicUpload = multer({ 
   storage: musicStorage,
   fileFilter: musicFileFilter
 });
 
 function generateShareId(): string {
   return crypto.randomBytes(8).toString('hex');
-}
-
-// Initialize notes.json if it doesn't exist
-const NOTES_FILE = path.join(process.cwd(), "data", "notes.json");
-
-// Create data directory if it doesn't exist
-if (!fs.existsSync(path.dirname(NOTES_FILE))) {
-  fs.mkdirSync(path.dirname(NOTES_FILE), { recursive: true });
-}
-
-// Initialize notes.json with empty array if it doesn't exist
-if (!fs.existsSync(NOTES_FILE)) {
-  fs.writeFileSync(NOTES_FILE, JSON.stringify([], null, 2));
 }
 
 export function registerRoutes(app: Express): Server {
@@ -325,42 +312,6 @@ export function registerRoutes(app: Express): Server {
 
     res.download(filepath);
   });
-
-  // Notes endpoints
-  app.post("/api/notes", (req: Request, res: Response) => {
-    try {
-      const { content } = req.body;
-      if (!content) {
-        return res.status(400).json({ message: "Content is required" });
-      }
-
-      const notes = JSON.parse(fs.readFileSync(NOTES_FILE, 'utf-8'));
-      const newNote = {
-        id: Date.now(),
-        content,
-        createdAt: new Date().toISOString()
-      };
-
-      notes.push(newNote);
-      fs.writeFileSync(NOTES_FILE, JSON.stringify(notes, null, 2));
-
-      res.status(201).json(newNote);
-    } catch (error) {
-      console.error('Error creating note:', error);
-      res.status(500).json({ message: "Failed to create note" });
-    }
-  });
-
-  app.get("/api/notes", (_req: Request, res: Response) => {
-    try {
-      const notes = JSON.parse(fs.readFileSync(NOTES_FILE, 'utf-8'));
-      res.json(notes);
-    } catch (error) {
-      console.error('Error reading notes:', error);
-      res.status(500).json({ message: "Failed to read notes" });
-    }
-  });
-
 
   const httpServer = createServer(app);
   return httpServer;
