@@ -324,7 +324,17 @@ export function registerRoutes(app: Express): Server {
     res.download(filepath);
   });
 
-  // Notes endpoint
+  // Notes endpoints
+  app.get("/api/notes", (req: Request, res: Response) => {
+    try {
+      const notesData = JSON.parse(fs.readFileSync(NOTES_FILE, 'utf-8'));
+      res.json(notesData.notes);
+    } catch (error) {
+      console.error('Error reading notes:', error);
+      res.status(500).json({ message: "Failed to fetch notes" });
+    }
+  });
+
   app.post("/api/notes", async (req: Request, res: Response) => {
     try {
       const { content } = req.body;
