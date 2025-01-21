@@ -13,10 +13,6 @@ const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
 const SESSION_SECRET = process.env.SESSION_SECRET || "development_secret";
 const DOWNLOADS_PASSWORD = process.env.DOWNLOADS_PASSWORD;
 
-if (!DOWNLOADS_PASSWORD) {
-  throw new Error("DOWNLOADS_PASSWORD environment variable must be set");
-}
-
 // Supported audio MIME types
 const SUPPORTED_AUDIO_TYPES = [
   'audio/mpeg',  // .mp3
@@ -27,6 +23,10 @@ const SUPPORTED_AUDIO_TYPES = [
   'audio/x-m4a', // .m4a
   'audio/webm',  // .weba
 ];
+
+if (!DOWNLOADS_PASSWORD) {
+  throw new Error("DOWNLOADS_PASSWORD environment variable must be set");
+}
 
 // Ensure uploads and music directories exist
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -93,31 +93,8 @@ export function registerRoutes(app: Express): Server {
     })
   );
 
-  // Check authentication status
-  app.get("/api/auth/status", (req: Request, res: Response) => {
-    res.json({ authenticated: req.session.authenticated === true });
-  });
-
-  // Authentication endpoint
-  app.post("/api/auth/login", (req: Request, res: Response) => {
-    const { password } = req.body;
-
-    if (password === DOWNLOADS_PASSWORD) {
-      req.session.authenticated = true;
-      res.json({ success: true });
-    } else {
-      res.status(401).json({ success: false, message: "Invalid password" });
-    }
-  });
-
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
-    req.session.destroy(() => {
-      res.json({ success: true });
-    });
-  });
-
-  // Get music files list - protected
-  app.get("/api/music", requireAuth, (_req: Request, res: Response) => {
+  // Get music files list
+  app.get("/api/music", (_req: Request, res: Response) => {
     fs.readdir(MUSIC_DIR, (err, files) => {
       if (err) {
         return res.status(500).send("Error reading music directory");
@@ -136,8 +113,8 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
-  // Stream music file - protected
-  app.get("/api/music/:filename", requireAuth, (req: Request, res: Response) => {
+  // Stream music file
+  app.get("/api/music/:filename", (req: Request, res: Response) => {
     const filename = req.params.filename;
     const filePath = path.join(MUSIC_DIR, filename);
 
@@ -173,12 +150,30 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Upload music file endpoint - protected
-  app.post("/api/music/upload", requireAuth, musicUpload.single("file"), (req: Request, res: Response) => {
+  // Upload music file endpoint
+  app.post("/api/music/upload", musicUpload.single("file"), (req: Request, res: Response) => {
     if (!req.file) {
       return res.status(400).send("No file uploaded");
     }
     res.json({ success: true, filename: req.file.filename });
+  });
+
+  // Authentication endpoint
+  app.post("/api/auth/login", (req: Request, res: Response) => {
+    const { password } = req.body;
+
+    if (password === DOWNLOADS_PASSWORD) {
+      req.session.authenticated = true;
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ success: false, message: "Invalid password" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    req.session.destroy(() => {
+      res.json({ success: true });
+    });
   });
 
   // Protected file listing endpoint
@@ -205,16 +200,16 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
-  // General file upload endpoint - protected
-  app.post("/api/upload", requireAuth, upload.single("file"), (req: Request, res: Response) => {
+  // General file upload endpoint
+  app.post("/api/upload", upload.single("file"), (req: Request, res: Response) => {
     if (!req.file) {
       return res.status(400).send("No file uploaded");
     }
     res.json({ success: true, filename: req.file.filename });
   });
 
-  // Create share link - protected
-  app.post("/api/share/:filename", requireAuth, (req: Request, res: Response) => {
+  // Create share link
+  app.post("/api/share/:filename", (req: Request, res: Response) => {
     const filename = req.params.filename;
     const filepath = path.join(UPLOAD_DIR, filename);
 
@@ -254,8 +249,8 @@ export function registerRoutes(app: Express): Server {
     res.download(filepath, filename.substring(filename.indexOf('-') + 1));
   });
 
-  // Preview file endpoint - protected
-  app.get("/api/preview/:filename", requireAuth, (req: Request, res: Response) => {
+  // Preview file endpoint
+  app.get("/api/preview/:filename", (req: Request, res: Response) => {
     const filename = req.params.filename;
     const filepath = path.join(UPLOAD_DIR, filename);
 
@@ -280,8 +275,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Download file endpoint - protected
-  app.get("/api/download/:filename", requireAuth, (req: Request, res: Response) => {
+  // Download file endpoint
+  app.get("/api/download/:filename", (req: Request, res: Response) => {
     const filename = req.params.filename;
     const filepath = path.join(UPLOAD_DIR, filename);
 
