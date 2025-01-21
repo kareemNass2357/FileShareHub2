@@ -100,13 +100,17 @@ export function registerRoutes(app: Express): Server {
     })
   );
 
-  // Authentication status endpoint
-  app.get("/api/auth-status", (req: Request, res: Response) => {
-    res.json({ isAuthenticated: !!req.session.authenticated });
-  });
+  // Check if user is authenticated middleware
+  const requireMusicAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (req.session.authenticated) {
+      next();
+    } else {
+      res.status(401).send("Unauthorized");
+    }
+  };
 
-  // Authentication endpoint
-  app.post("/api/auth/login", (req: Request, res: Response) => {
+  // Music authentication endpoints
+  app.post("/api/music/login", (req: Request, res: Response) => {
     const { password } = req.body;
 
     if (password === AUTH_PASSWORD) {
@@ -117,21 +121,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
+  app.post("/api/music/logout", (req: Request, res: Response) => {
     req.session.authenticated = false;
     res.json({ success: true });
   });
 
-  // Check if user is authenticated middleware
-  const requireMusicAuth = (req: Request, res: Response, next: NextFunction) => {
-    if (req.session.authenticated) {
-      next();
-    } else {
-      res.status(401).send("Unauthorized");
-    }
-  };
-
-  // Music authentication endpoints (removed /api/music prefix)
+  // Get authentication status
+  app.get("/api/music/auth-status", (req: Request, res: Response) => {
+    res.json({ isAuthenticated: !!req.session.authenticated });
+  });
 
   // Protect music endpoints
   app.get("/api/music", requireMusicAuth, (_req: Request, res: Response) => {
@@ -198,6 +196,22 @@ export function registerRoutes(app: Express): Server {
     res.json({ success: true, filename: req.file.filename });
   });
 
+  // Authentication endpoint
+  app.post("/api/auth/login", (req: Request, res: Response) => {
+    const { password } = req.body;
+
+    if (password === AUTH_PASSWORD) {
+      req.session.authenticated = true;
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ success: false, message: "Invalid password" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    req.session.authenticated = false;
+    res.json({ success: true });
+  });
 
   // Protected file listing endpoint
   app.get("/api/files", requireAuth, (_req: Request, res: Response) => {
@@ -310,17 +324,7 @@ export function registerRoutes(app: Express): Server {
     res.download(filepath);
   });
 
-  // Notes endpoints
-  app.get("/api/notes", (req: Request, res: Response) => {
-    try {
-      const notesData = JSON.parse(fs.readFileSync(NOTES_FILE, 'utf-8'));
-      res.json(notesData.notes);
-    } catch (error) {
-      console.error('Error reading notes:', error);
-      res.status(500).json({ message: "Failed to fetch notes" });
-    }
-  });
-
+  // Notes endpoint
   app.post("/api/notes", async (req: Request, res: Response) => {
     try {
       const { content } = req.body;

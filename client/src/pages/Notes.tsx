@@ -3,29 +3,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-interface Note {
-  id: string;
-  content: string;
-  createdAt: string;
-}
+import { useMutation } from "@tanstack/react-query";
 
 export default function Notes() {
   const [note, setNote] = useState("");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // Query for authentication status
-  const { data: authStatus } = useQuery<{ isAuthenticated: boolean }>({
-    queryKey: ["/api/auth-status"],
-  });
-
-  // Query for notes
-  const { data: notes } = useQuery<Note[]>({
-    queryKey: ["/api/notes"],
-    enabled: authStatus?.isAuthenticated ?? false,
-  });
 
   const { mutate: saveNote, isPending } = useMutation({
     mutationFn: async (noteText: string) => {
@@ -49,10 +31,6 @@ export default function Notes() {
         description: "Note saved successfully!",
       });
       setNote(""); // Clear the input after successful save
-      // Invalidate the notes query to refetch the list
-      if (authStatus?.isAuthenticated) {
-        queryClient.invalidateQueries({ queryKey: ["/api/notes"] });
-      }
     },
     onError: () => {
       toast({
@@ -85,24 +63,6 @@ export default function Notes() {
               {isPending ? "Saving..." : "Save Note"}
             </Button>
           </form>
-
-          {authStatus?.isAuthenticated && notes && notes.length > 0 && (
-            <div className="mt-8 space-y-4">
-              <h2 className="text-xl font-semibold">Previous Notes</h2>
-              <div className="space-y-4">
-                {notes.map((note) => (
-                  <Card key={note.id}>
-                    <CardContent className="pt-4">
-                      <p className="whitespace-pre-wrap">{note.content}</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {new Date(note.createdAt).toLocaleString()}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
