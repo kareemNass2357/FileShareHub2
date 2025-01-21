@@ -4,9 +4,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LogOut } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function Navigation() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -26,6 +27,8 @@ export default function Navigation() {
           title: "Success",
           description: "Logged out successfully",
         });
+        // Force page refresh after logout
+        window.location.href = '/';
       } else {
         throw new Error("Logout failed");
       }
@@ -62,7 +65,9 @@ export default function Navigation() {
           </Link>
           <div className="flex items-center space-x-2">
             <NavLink href="/">Upload</NavLink>
-            <NavLink href="/downloads">Downloads</NavLink>
+            {authStatus?.isAuthenticated && (
+              <NavLink href="/downloads">Downloads</NavLink>
+            )}
             {authStatus?.isAuthenticated ? (
               <NavLink href="/music">Music</NavLink>
             ) : (
@@ -71,17 +76,20 @@ export default function Navigation() {
             <NavLink href="/about">About</NavLink>
           </div>
         </div>
-        {authStatus?.isAuthenticated && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
-        )}
+        <div className="flex items-center space-x-2">
+          <ThemeToggle />
+          {authStatus?.isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          )}
+        </div>
       </div>
     </nav>
   );
