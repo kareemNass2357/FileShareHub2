@@ -7,6 +7,8 @@ import crypto from "crypto";
 import session from "express-session";
 import { requireAuth } from "./middleware";
 import MemoryStore from "memorystore";
+import { db } from "@db";
+import { notes, insertNoteSchema } from "@db/schema";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
@@ -312,6 +314,29 @@ export function registerRoutes(app: Express): Server {
 
     res.download(filepath);
   });
+
+  // Notes endpoints
+  app.post("/api/notes", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertNoteSchema.parse({
+        content: req.body.content,
+      });
+
+      const [createdNote] = await db.insert(notes).values(validatedData).returning();
+
+      res.json({
+        success: true,
+        note: createdNote,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ success: false, message: error.message });
+      } else {
+        res.status(500).json({ success: false, message: "Internal server error" });
+      }
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;
