@@ -65,6 +65,7 @@ export default function Navigation() {
           </Link>
           <div className="flex items-center space-x-2">
             <NavLink href="/">Upload</NavLink>
+            <NavLink href="/notes">Notes</NavLink>
             {authStatus?.isAuthenticated && (
               <NavLink href="/downloads">Downloads</NavLink>
             )}
