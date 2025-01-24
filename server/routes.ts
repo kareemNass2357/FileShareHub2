@@ -193,7 +193,13 @@ export function registerRoutes(app: Express): Server {
 
     if (password === AUTH_PASSWORD) {
       req.session.authenticated = true;
-      res.json({ success: true });
+      req.session.save((err) => {
+        if (err) {
+          res.status(500).json({ success: false, message: "Failed to save session" });
+        } else {
+          res.json({ success: true });
+        }
+      });
     } else {
       res.status(401).json({ success: false, message: "Invalid password" });
     }
