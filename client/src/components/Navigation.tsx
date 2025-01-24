@@ -27,7 +27,6 @@ export default function Navigation() {
           title: "Success",
           description: "Logged out successfully",
         });
-        // Force page refresh after logout
         window.location.href = '/';
       } else {
         throw new Error("Logout failed");
@@ -66,11 +65,13 @@ export default function Navigation() {
           <div className="flex items-center space-x-2">
             <NavLink href="/">Upload</NavLink>
             {authStatus?.isAuthenticated && (
-              <NavLink href="/downloads">Downloads</NavLink>
+              <>
+                <NavLink href="/downloads">Downloads</NavLink>
+                <NavLink href="/notes">Notes</NavLink>
+                <NavLink href="/music">Music</NavLink>
+              </>
             )}
-            {authStatus?.isAuthenticated ? (
-              <NavLink href="/music">Music</NavLink>
-            ) : (
+            {!authStatus?.isAuthenticated && (
               <NavLink href="/login">Login</NavLink>
             )}
             <NavLink href="/about">About</NavLink>
