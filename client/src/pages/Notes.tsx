@@ -55,7 +55,7 @@ export default function Notes() {
   const { data: notes, isLoading } = useQuery<Note[]>({
     queryKey: ["/api/notes", selectedFolder],
     queryFn: async () => {
-      const url = selectedFolder 
+      const url = selectedFolder
         ? `/api/folders/${selectedFolder}/notes`
         : "/api/notes";
       const response = await fetch(url);
@@ -104,7 +104,7 @@ export default function Notes() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           content: noteContent,
           folderId: selectedFolder,
         }),
@@ -259,7 +259,7 @@ export default function Notes() {
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="Folder name"
                 />
-                <Button 
+                <Button
                   type="submit"
                   disabled={addFolderMutation.isPending || !newFolderName.trim()}
                 >
@@ -311,10 +311,7 @@ export default function Notes() {
               placeholder="Write your note here..."
               className="min-h-[200px]"
             />
-            <Button 
-              type="submit" 
-              disabled={addNoteMutation.isPending || !content.trim()}
-            >
+            <Button type="submit" disabled={addNoteMutation.isPending || !content.trim()}>
               {addNoteMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -329,10 +326,7 @@ export default function Notes() {
           {authStatus?.isAuthenticated ? (
             <div className="space-y-4">
               {notes?.map((note) => (
-                <div 
-                  key={note.id} 
-                  className="p-4 rounded-lg border bg-card"
-                >
+                <div key={note.id} className="p-4 rounded-lg border bg-card">
                   {editingId === note.id ? (
                     <div className="space-y-2">
                       <Textarea
@@ -340,45 +334,50 @@ export default function Notes() {
                         onChange={(e) => setEditContent(e.target.value)}
                         className="min-h-[100px]"
                       />
-                      <Select
-                        value={note.folderId?.toString() ?? ""}
-                        onValueChange={(value) => {
-                          handleEdit(note.id, value ? parseInt(value) : null);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select folder" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">No folder</SelectItem>
-                          {folders?.map((folder) => (
-                            <SelectItem key={folder.id} value={folder.id.toString()}>
-                              {folder.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleEdit(note.id, note.folderId)}
-                          disabled={editNoteMutation.isPending}
-                        >
-                          {editNoteMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Check className="h-4 w-4" />
-                          )}
-                          <span className="ml-2">Save</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEdit}
-                        >
-                          <X className="h-4 w-4" />
-                          <span className="ml-2">Cancel</span>
-                        </Button>
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-muted-foreground">Folder:</span>
+                          <Select
+                            defaultValue={note.folderId?.toString() ?? ""}
+                            onValueChange={(value) => {
+                              editNoteMutation.mutate({
+                                id: note.id,
+                                content: editContent,
+                                folderId: value ? parseInt(value) : null,
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Select folder" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">No folder</SelectItem>
+                              {folders?.map((folder) => (
+                                <SelectItem key={folder.id} value={folder.id.toString()}>
+                                  {folder.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleEdit(note.id, note.folderId)}
+                            disabled={editNoteMutation.isPending}
+                          >
+                            {editNoteMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                            <span className="ml-2">Save</span>
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelEdit}>
+                            <X className="h-4 w-4" />
+                            <span className="ml-2">Cancel</span>
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ) : (
