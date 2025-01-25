@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Copy, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   text: string;
   timestamp: string;
+  isNew?: boolean;
 }
 
 export default function CopyAnywhere() {
@@ -16,6 +19,8 @@ export default function CopyAnywhere() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (sessionName) {
@@ -31,7 +36,19 @@ export default function CopyAnywhere() {
 
       ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
-        setMessages((prev) => [...prev, message]);
+        setMessages((prev) => [
+          ...prev,
+          { ...message, isNew: true }, // Mark new messages
+        ]);
+
+        // Remove the isNew flag after animation
+        setTimeout(() => {
+          setMessages((prev) =>
+            prev.map((msg, idx) =>
+              idx === prev.length - 1 ? { ...msg, isNew: false } : msg
+            )
+          );
+        }, 500);
       };
 
       ws.onclose = () => {
@@ -62,10 +79,37 @@ export default function CopyAnywhere() {
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, message]); //added by me
+    setMessages((prev) => [...prev, { ...message, isNew: true }]);
+
+    // Remove the isNew flag after animation
+    setTimeout(() => {
+      setMessages((prev) =>
+        prev.map((msg, idx) =>
+          idx === prev.length - 1 ? { ...msg, isNew: false } : msg
+        )
+      );
+    }, 500);
 
     socket.send(JSON.stringify(message));
     setNewText("");
+  };
+
+  const copyToClipboard = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(index);
+      toast({
+        description: "Text copied to clipboard!",
+        duration: 2000,
+      });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        description: "Failed to copy text.",
+        duration: 2000,
+      });
+    }
   };
 
   return (
@@ -115,11 +159,30 @@ export default function CopyAnywhere() {
               <ScrollArea className="h-[300px] w-full">
                 <div className="space-y-2">
                   {messages.map((msg, i) => (
-                    <div key={i} className="p-2 bg-muted rounded-lg">
-                      <p>{msg.text}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(msg.timestamp).toLocaleTimeString()}
-                      </p>
+                    <div
+                      key={i}
+                      className={`p-2 bg-muted rounded-lg flex justify-between items-start transition-colors duration-300 ${
+                        msg.isNew ? "bg-primary/10" : ""
+                      }`}
+                    >
+                      <div>
+                        <p>{msg.text}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => copyToClipboard(msg.text, i)}
+                        className="h-8 w-8"
+                      >
+                        {copiedId === i ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
                   ))}
                 </div>
