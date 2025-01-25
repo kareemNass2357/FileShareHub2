@@ -19,6 +19,10 @@ export default function Notes() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const { data: authStatus } = useQuery<{ isAuthenticated: boolean }>({
+    queryKey: ["/api/music/auth-status"],
+  });
+
   const { data: notes, isLoading } = useQuery<Note[]>({
     queryKey: ["/api/notes"],
   });
@@ -156,27 +160,29 @@ export default function Notes() {
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Notes</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4 mb-8">
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your note here..."
-          className="min-h-[200px]"
-        />
-        <Button 
-          type="submit" 
-          disabled={addNoteMutation.isPending || !content.trim()}
-        >
-          {addNoteMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Adding...
-            </>
-          ) : (
-            'Add Note'
-          )}
-        </Button>
-      </form>
+      {authStatus?.isAuthenticated && (
+        <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Write your note here..."
+            className="min-h-[200px]"
+          />
+          <Button 
+            type="submit" 
+            disabled={addNoteMutation.isPending || !content.trim()}
+          >
+            {addNoteMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              'Add Note'
+            )}
+          </Button>
+        </form>
+      )}
 
       <div className="space-y-4">
         {notes?.map((note) => (
@@ -217,38 +223,44 @@ export default function Notes() {
             ) : (
               <>
                 <p className="whitespace-pre-wrap mb-2">{note.content}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <time className="text-sm text-muted-foreground">
-                    {format(new Date(note.createdAt), 'PPpp')}
-                  </time>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => startEdit(note)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => deleteNoteMutation.mutate(note.id)}
-                      disabled={deleteNoteMutation.isPending}
-                    >
-                      {deleteNoteMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash className="h-4 w-4" />
-                      )}
-                    </Button>
+                {authStatus?.isAuthenticated && (
+                  <div className="flex items-center justify-between mt-2">
+                    <time className="text-sm text-muted-foreground">
+                      {format(new Date(note.createdAt), 'PPpp')}
+                    </time>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => startEdit(note)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteNoteMutation.mutate(note.id)}
+                        disabled={deleteNoteMutation.isPending}
+                      >
+                        {deleteNoteMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           </div>
         ))}
         {notes?.length === 0 && (
-          <p className="text-center text-muted-foreground">No notes yet. Create your first note above!</p>
+          <p className="text-center text-muted-foreground">
+            {authStatus?.isAuthenticated 
+              ? "No notes yet. Create your first note above!"
+              : "No notes available. Please login to create notes."}
+          </p>
         )}
       </div>
     </div>
