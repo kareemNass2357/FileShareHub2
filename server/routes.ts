@@ -8,8 +8,8 @@ import session from "express-session";
 import { requireAuth } from "./middleware";
 import MemoryStore from "memorystore";
 import { db } from "@db";
-import { notes, insertNoteSchema } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { notes, folders, insertNoteSchema, insertFolderSchema } from "@db/schema";
+import { eq, desc } from "drizzle-orm";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
@@ -357,12 +357,12 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Notes endpoints
-  app.get("/api/notes", requireAuth, async (_req: Request, res: Response) => {
+  app.get("/api/notes", async (_req: Request, res: Response) => {
     try {
       const allNotes = await db
         .select()
         .from(notes)
-        .orderBy(notes.createdAt, "desc");
+        .orderBy(desc(notes.createdAt));
       res.json(allNotes);
     } catch (error) {
       res
@@ -375,6 +375,8 @@ export function registerRoutes(app: Express): Server {
     try {
       const validatedData = insertNoteSchema.parse({
         content: req.body.content,
+        folderId: req.body.folderId,
+        user: req.session.authenticated ? 'admin' : 'guest',
       });
 
       const [createdNote] = await db
@@ -441,6 +443,78 @@ export function registerRoutes(app: Express): Server {
       }
     },
   );
+
+
+  // Folders endpoints
+  app.get("/api/folders", async (_req: Request, res: Response) => {
+    try {
+      const allFolders = await db
+        .select()
+        .from(folders)
+        .orderBy(desc(folders.createdAt));
+      res.json(allFolders);
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to fetch folders" });
+    }
+  });
+
+  app.post("/api/folders", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertFolderSchema.parse({
+        name: req.body.name,
+      });
+
+      const [createdFolder] = await db
+        .insert(folders)
+        .values(validatedData)
+        .returning();
+
+      res.json({
+        success: true,
+        folder: createdFolder,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ success: false, message: error.message });
+      } else {
+        res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
+      }
+    }
+  });
+
+  // Get notes by folder
+  app.get("/api/folders/:folderId/notes", async (req: Request, res: Response) => {
+    try {
+      const folderId = parseInt(req.params.folderId);
+      const folderNotes = await db
+        .select()
+        .from(notes)
+        .where(eq(notes.folderId, folderId))
+        .orderBy(desc(notes.createdAt));
+      res.json(folderNotes);
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to fetch folder notes" });
+    }
+  });
+
+  // Delete folder
+  app.delete("/api/folders/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      await db.delete(folders).where(eq(folders.id, folderId));
+      res.json({ success: true });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to delete folder" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
