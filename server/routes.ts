@@ -9,6 +9,7 @@ import { requireAuth } from "./middleware";
 import MemoryStore from "memorystore";
 import { db } from "@db";
 import { notes, insertNoteSchema } from "@db/schema";
+import { eq } from "drizzle-orm";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MUSIC_DIR = path.join(UPLOAD_DIR, "music");
@@ -346,6 +347,36 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.delete("/api/notes/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const noteId = parseInt(req.params.id);
+      await db.delete(notes).where(eq(notes.id, noteId));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Failed to delete note" });
+    }
+  });
+
+  app.patch("/api/notes/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const noteId = parseInt(req.params.id);
+      const { content } = req.body;
+
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ success: false, message: "Invalid content" });
+      }
+
+      const [updatedNote] = await db
+        .update(notes)
+        .set({ content })
+        .where(eq(notes.id, noteId))
+        .returning();
+
+      res.json({ success: true, note: updatedNote });
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Failed to update note" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

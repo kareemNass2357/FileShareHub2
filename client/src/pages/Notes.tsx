@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil, Trash, X, Check } from "lucide-react";
 
 type Note = {
   id: number;
@@ -14,6 +14,8 @@ type Note = {
 
 export default function Notes() {
   const [content, setContent] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -55,10 +57,90 @@ export default function Notes() {
     },
   });
 
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: number) => {
+      const response = await fetch(`/api/notes/${noteId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete note");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notes"] });
+      toast({
+        title: "Success",
+        description: "Note deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete note",
+      });
+    },
+  });
+
+  const editNoteMutation = useMutation({
+    mutationFn: async ({ id, content }: { id: number; content: string }) => {
+      const response = await fetch(`/api/notes/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update note");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      setEditingId(null);
+      setEditContent("");
+      queryClient.invalidateQueries({ queryKey: ["/api/notes"] });
+      toast({
+        title: "Success",
+        description: "Note updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update note",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (content.trim()) {
       addNoteMutation.mutate(content);
+    }
+  };
+
+  const startEdit = (note: Note) => {
+    setEditingId(note.id);
+    setEditContent(note.content);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditContent("");
+  };
+
+  const handleEdit = (id: number) => {
+    if (editContent.trim()) {
+      editNoteMutation.mutate({ id, content: editContent });
     }
   };
 
@@ -102,10 +184,67 @@ export default function Notes() {
             key={note.id} 
             className="p-4 rounded-lg border bg-card"
           >
-            <p className="whitespace-pre-wrap mb-2">{note.content}</p>
-            <time className="text-sm text-muted-foreground">
-              {format(new Date(note.createdAt), 'PPpp')}
-            </time>
+            {editingId === note.id ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleEdit(note.id)}
+                    disabled={editNoteMutation.isPending}
+                  >
+                    {editNoteMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                    <span className="ml-2">Save</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={cancelEdit}
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="ml-2">Cancel</span>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="whitespace-pre-wrap mb-2">{note.content}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <time className="text-sm text-muted-foreground">
+                    {format(new Date(note.createdAt), 'PPpp')}
+                  </time>
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => startEdit(note)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deleteNoteMutation.mutate(note.id)}
+                      disabled={deleteNoteMutation.isPending}
+                    >
+                      {deleteNoteMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ))}
         {notes?.length === 0 && (
