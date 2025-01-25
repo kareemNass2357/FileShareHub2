@@ -386,13 +386,13 @@ export default function Notes() {
                         <div className="flex items-center space-x-2">
                           {selectedFolder === null && (
                             <Select
-                              value={note.folderId?.toString() ?? ""}
+                              value={note.folderId?.toString() ?? "none"}
                               onValueChange={async (value) => {
                                 try {
                                   await editNoteMutation.mutateAsync({
                                     id: note.id,
                                     content: note.content,
-                                    folderId: value ? parseInt(value) : null,
+                                    folderId: value === "none" ? null : parseInt(value),
                                   });
                                   toast({
                                     title: "Success",
@@ -411,7 +411,7 @@ export default function Notes() {
                                 <SelectValue placeholder="Move to folder" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">No folder</SelectItem>
+                                <SelectItem value="none">No folder</SelectItem>
                                 {folders?.map((folder) => (
                                   <SelectItem key={folder.id} value={folder.id.toString()}>
                                     {folder.name}
