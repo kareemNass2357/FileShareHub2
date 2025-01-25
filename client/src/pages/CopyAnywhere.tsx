@@ -10,6 +10,7 @@ interface Message {
 }
 
 export default function CopyAnywhere() {
+  const [sessionNameInput, setSessionNameInput] = useState("");
   const [sessionName, setSessionName] = useState("");
   const [newText, setNewText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -18,8 +19,9 @@ export default function CopyAnywhere() {
 
   useEffect(() => {
     if (sessionName) {
-      const ws = new WebSocket(`ws://${window.location.host}/api/ws/${sessionName}`);
-      
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws/${sessionName}`);
+
       ws.onopen = () => {
         setIsConnected(true);
         console.log("Connected to WebSocket");
@@ -43,6 +45,12 @@ export default function CopyAnywhere() {
     }
   }, [sessionName]);
 
+  const handleSaveSession = () => {
+    if (sessionNameInput.trim()) {
+      setSessionName(sessionNameInput.trim());
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!socket || !newText.trim()) return;
@@ -63,17 +71,23 @@ export default function CopyAnywhere() {
           <CardTitle>CopyAnywhere</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
+          <div className="flex gap-2">
             <Input
               placeholder="Enter session name"
-              value={sessionName}
-              onChange={(e) => setSessionName(e.target.value)}
-              className="mb-2"
+              value={sessionNameInput}
+              onChange={(e) => setSessionNameInput(e.target.value)}
+              className="flex-1"
             />
-            {isConnected && (
-              <p className="text-sm text-green-600">Connected to session: {sessionName}</p>
-            )}
+            <Button 
+              onClick={handleSaveSession}
+              disabled={!sessionNameInput.trim() || isConnected}
+            >
+              Save Session
+            </Button>
           </div>
+          {isConnected && (
+            <p className="text-sm text-green-600">Connected to session: {sessionName}</p>
+          )}
 
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
