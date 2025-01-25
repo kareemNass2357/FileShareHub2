@@ -19,8 +19,10 @@ export default function CopyAnywhere() {
 
   useEffect(() => {
     if (sessionName) {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws/${sessionName}`);
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(
+        `${protocol}//${window.location.host}/api/ws/${sessionName}`,
+      );
 
       ws.onopen = () => {
         setIsConnected(true);
@@ -29,7 +31,7 @@ export default function CopyAnywhere() {
 
       ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
-        setMessages(prev => [...prev, message]);
+        setMessages((prev) => [...prev, message]);
       };
 
       ws.onclose = () => {
@@ -60,6 +62,8 @@ export default function CopyAnywhere() {
       timestamp: new Date().toISOString(),
     };
 
+    setMessages((prev) => [...prev, message]); //added by me
+
     socket.send(JSON.stringify(message));
     setNewText("");
   };
@@ -78,7 +82,7 @@ export default function CopyAnywhere() {
               onChange={(e) => setSessionNameInput(e.target.value)}
               className="flex-1"
             />
-            <Button 
+            <Button
               onClick={handleSaveSession}
               disabled={!sessionNameInput.trim() || isConnected}
             >
@@ -86,7 +90,9 @@ export default function CopyAnywhere() {
             </Button>
           </div>
           {isConnected && (
-            <p className="text-sm text-green-600">Connected to session: {sessionName}</p>
+            <p className="text-sm text-green-600">
+              Connected to session: {sessionName}
+            </p>
           )}
 
           <form onSubmit={handleSubmit} className="flex gap-2">
