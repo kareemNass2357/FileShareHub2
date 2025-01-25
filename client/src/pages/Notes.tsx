@@ -55,7 +55,7 @@ export default function Notes() {
   const { data: notes, isLoading } = useQuery<Note[]>({
     queryKey: ["/api/notes", selectedFolder],
     queryFn: async () => {
-      const url = selectedFolder 
+      const url = selectedFolder
         ? `/api/folders/${selectedFolder}/notes`
         : "/api/notes";
       const response = await fetch(url);
@@ -104,7 +104,7 @@ export default function Notes() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           content: noteContent,
           folderId: selectedFolder,
         }),
@@ -259,7 +259,7 @@ export default function Notes() {
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="Folder name"
                 />
-                <Button 
+                <Button
                   type="submit"
                   disabled={addFolderMutation.isPending || !newFolderName.trim()}
                 >
@@ -269,7 +269,7 @@ export default function Notes() {
                       Creating...
                     </>
                   ) : (
-                    'Create Folder'
+                    "Create Folder"
                   )}
                 </Button>
               </form>
@@ -311,17 +311,14 @@ export default function Notes() {
               placeholder="Write your note here..."
               className="min-h-[200px]"
             />
-            <Button 
-              type="submit" 
-              disabled={addNoteMutation.isPending || !content.trim()}
-            >
+            <Button type="submit" disabled={addNoteMutation.isPending || !content.trim()}>
               {addNoteMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Adding...
                 </>
               ) : (
-                'Add Note'
+                "Add Note"
               )}
             </Button>
           </form>
@@ -329,10 +326,7 @@ export default function Notes() {
           {authStatus?.isAuthenticated ? (
             <div className="space-y-4">
               {notes?.map((note) => (
-                <div 
-                  key={note.id} 
-                  className="p-4 rounded-lg border bg-card"
-                >
+                <div key={note.id} className="p-4 rounded-lg border bg-card">
                   {editingId === note.id ? (
                     <div className="space-y-2">
                       <Textarea
@@ -371,11 +365,7 @@ export default function Notes() {
                           )}
                           <span className="ml-2">Save</span>
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEdit}
-                        >
+                        <Button size="sm" variant="outline" onClick={cancelEdit}>
                           <X className="h-4 w-4" />
                           <span className="ml-2">Cancel</span>
                         </Button>
@@ -387,18 +377,50 @@ export default function Notes() {
                       <div className="flex items-center justify-between mt-2">
                         <div className="space-y-1">
                           <time className="text-sm text-muted-foreground block">
-                            {format(new Date(note.createdAt), 'PPpp')}
+                            {format(new Date(note.createdAt), "PPpp")}
                           </time>
                           <span className="text-sm text-muted-foreground">
                             By: {note.user}
                           </span>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => startEdit(note)}
-                          >
+                        <div className="flex items-center space-x-2">
+                          {selectedFolder === null && (
+                            <Select
+                              value={note.folderId?.toString() ?? ""}
+                              onValueChange={async (value) => {
+                                try {
+                                  await editNoteMutation.mutateAsync({
+                                    id: note.id,
+                                    content: note.content,
+                                    folderId: value ? parseInt(value) : null,
+                                  });
+                                  toast({
+                                    title: "Success",
+                                    description: "Note moved successfully",
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Error",
+                                    description: "Failed to move note",
+                                  });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Move to folder" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">No folder</SelectItem>
+                                {folders?.map((folder) => (
+                                  <SelectItem key={folder.id} value={folder.id.toString()}>
+                                    {folder.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => startEdit(note)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
