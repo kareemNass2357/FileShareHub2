@@ -6,6 +6,7 @@ import Downloads from "@/pages/Downloads";
 import Login from "@/pages/Login";
 import MusicPlayerPage from "@/pages/MusicPlayerPage";
 import Notes from "@/pages/Notes";
+import CopyAnywhere from "@/pages/CopyAnywhere";
 import { AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -21,6 +22,7 @@ function App() {
           <Route path="/login" component={Login} />
           <Route path="/music" component={MusicPlayerPage} />
           <Route path="/notes" component={Notes} />
+          <Route path="/copy" component={CopyAnywhere} />
           <Route component={NotFound} />
         </Switch>
       </main>

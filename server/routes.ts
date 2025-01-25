@@ -7,6 +7,7 @@ import crypto from "crypto";
 import session from "express-session";
 import { requireAuth } from "./middleware";
 import MemoryStore from "memorystore";
+import { WebSocket, WebSocketServer } from 'ws';
 import { db } from "@db";
 import { notes, folders, insertNoteSchema, insertFolderSchema } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -517,5 +518,50 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
+  // WebSocket server setup for CopyAnywhere
+  const wss = new WebSocketServer({ noServer: true });
+  const sessions = new Map<string, Set<WebSocket>>();
+
+  // Handle WebSocket upgrade
+  httpServer.on('upgrade', (request, socket, head) => {
+    const pathname = new URL(request.url, 'http://localhost').pathname;
+
+    if (pathname.startsWith('/api/ws/')) {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        const sessionName = pathname.split('/').pop();
+        if (!sessionName) {
+          ws.close();
+          return;
+        }
+
+        // Initialize session if it doesn't exist
+        if (!sessions.has(sessionName)) {
+          sessions.set(sessionName, new Set());
+        }
+
+        const sessionClients = sessions.get(sessionName)!;
+        sessionClients.add(ws);
+
+        // Handle incoming messages
+        ws.on('message', (message) => {
+          // Broadcast to all clients in the same session
+          sessionClients.forEach((client) => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              client.send(message.toString());
+            }
+          });
+        });
+
+        // Handle client disconnect
+        ws.on('close', () => {
+          sessionClients.delete(ws);
+          if (sessionClients.size === 0) {
+            sessions.delete(sessionName);
+          }
+        });
+      });
+    }
+  });
+
   return httpServer;
 }
