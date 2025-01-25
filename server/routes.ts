@@ -371,7 +371,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/notes", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/notes", async (req: Request, res: Response) => {
     try {
       const validatedData = insertNoteSchema.parse({
         content: req.body.content,
