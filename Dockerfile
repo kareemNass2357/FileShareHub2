@@ -10,27 +10,27 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Create uploads directory structure
-RUN mkdir -p uploads/music
-
-# Copy package files
+# Copy package files first to leverage Docker cache
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy source code
+# Copy application code
 COPY . .
 
-# Build the application
+# Build TypeScript code
 RUN npm run build
+
+# Create required directories
+RUN mkdir -p uploads/music
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=5000
 
-# Expose the port the app runs on
+# Expose the application port
 EXPOSE 5000
 
-# Command to run the application
+# Start the application
 CMD ["npm", "start"]

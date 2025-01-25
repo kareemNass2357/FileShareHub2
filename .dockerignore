@@ -8,3 +8,10 @@ uploads/*
 .vscode
 dist
 *.log
+.DS_Store
+coverage
+.env*
+*.sqlite
+__pycache__
+*.pyc
+.pytest_cache
