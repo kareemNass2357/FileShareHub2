@@ -316,6 +316,15 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Notes endpoints
+  app.get("/api/notes", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const allNotes = await db.select().from(notes).orderBy(notes.createdAt, "desc");
+      res.json(allNotes);
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Failed to fetch notes" });
+    }
+  });
+
   app.post("/api/notes", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedData = insertNoteSchema.parse({
