@@ -75,6 +75,8 @@ export default function Navigation() {
               <NavLink href="/login">Login</NavLink>
             )}
             <NavLink href="/about">About</NavLink>
+            <NavLink href="/copy">AnywereCopy</NavLink>
+
           </div>
         </div>
         <div className="flex items-center space-x-2">

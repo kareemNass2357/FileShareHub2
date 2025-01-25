@@ -6,6 +6,7 @@ import MusicPlayerPage from "@/pages/MusicPlayerPage";
 import About from "@/pages/About";
 import Downloads from "@/pages/Downloads";
 import Login from "@/pages/Login";
+import CopyAnywhere from "@/pages/CopyAnywhere";
 
 export default function RootLayout() {
   return (
@@ -17,6 +18,7 @@ export default function RootLayout() {
         <Route path="/downloads" component={Downloads} />
         <Route path="/login" component={Login} />
         <Route path="/music" component={MusicPlayerPage} />
+        <Route path="/copy" component={CopyAnywhere} />
       </main>
     </div>
   );
