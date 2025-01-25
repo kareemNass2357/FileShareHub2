@@ -67,10 +67,10 @@ export default function Navigation() {
             {authStatus?.isAuthenticated && (
               <>
                 <NavLink href="/downloads">Downloads</NavLink>
-                <NavLink href="/notes">Notes</NavLink>
                 <NavLink href="/music">Music</NavLink>
               </>
             )}
+            <NavLink href="/notes">Notes</NavLink>
             {!authStatus?.isAuthenticated && (
               <NavLink href="/login">Login</NavLink>
             )}
