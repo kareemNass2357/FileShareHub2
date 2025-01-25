@@ -13,6 +13,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Note = {
   id: number;
@@ -111,7 +118,9 @@ export default function Notes() {
     },
     onSuccess: () => {
       setContent("");
-      queryClient.invalidateQueries({ queryKey: ["/api/notes", selectedFolder] });
+      if (authStatus?.isAuthenticated) {
+        queryClient.invalidateQueries({ queryKey: ["/api/notes", selectedFolder] });
+      }
       toast({
         title: "Success",
         description: "Note added successfully",
@@ -207,9 +216,9 @@ export default function Notes() {
     setEditContent("");
   };
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: number, folderId: number | null) => {
     if (editContent.trim()) {
-      editNoteMutation.mutate({ id, content: editContent, folderId: selectedFolder });
+      editNoteMutation.mutate({ id, content: editContent, folderId });
     }
   };
 
@@ -230,67 +239,71 @@ export default function Notes() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Notes</h1>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <FolderPlus className="mr-2 h-4 w-4" />
-              New Folder
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Folder</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateFolder} className="space-y-4">
-              <Input
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="Folder name"
-              />
-              <Button 
-                type="submit"
-                disabled={addFolderMutation.isPending || !newFolderName.trim()}
-              >
-                {addFolderMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Folder'
-                )}
+      {authStatus?.isAuthenticated && (
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Notes</h1>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <FolderPlus className="mr-2 h-4 w-4" />
+                New Folder
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Folder</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateFolder} className="space-y-4">
+                <Input
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Folder name"
+                />
+                <Button 
+                  type="submit"
+                  disabled={addFolderMutation.isPending || !newFolderName.trim()}
+                >
+                  {addFolderMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Folder'
+                  )}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
 
-      <div className="grid grid-cols-4 gap-6">
-        <div className="space-y-2">
-          <Button
-            variant={selectedFolder === null ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => setSelectedFolder(null)}
-          >
-            <Folder className="mr-2 h-4 w-4" />
-            All Notes
-          </Button>
-          {folders?.map((folder) => (
+      <div className={authStatus?.isAuthenticated ? "grid grid-cols-4 gap-6" : ""}>
+        {authStatus?.isAuthenticated && (
+          <div className="space-y-2">
             <Button
-              key={folder.id}
-              variant={selectedFolder === folder.id ? "secondary" : "ghost"}
+              variant={selectedFolder === null ? "secondary" : "ghost"}
               className="w-full justify-start"
-              onClick={() => setSelectedFolder(folder.id)}
+              onClick={() => setSelectedFolder(null)}
             >
               <Folder className="mr-2 h-4 w-4" />
-              {folder.name}
+              All Notes
             </Button>
-          ))}
-        </div>
+            {folders?.map((folder) => (
+              <Button
+                key={folder.id}
+                variant={selectedFolder === folder.id ? "secondary" : "ghost"}
+                className="w-full justify-start"
+                onClick={() => setSelectedFolder(folder.id)}
+              >
+                <Folder className="mr-2 h-4 w-4" />
+                {folder.name}
+              </Button>
+            ))}
+          </div>
+        )}
 
-        <div className="col-span-3 space-y-6">
+        <div className={authStatus?.isAuthenticated ? "col-span-3 space-y-6" : "space-y-6"}>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Textarea
               value={content}
@@ -313,11 +326,7 @@ export default function Notes() {
             </Button>
           </form>
 
-          {!authStatus?.isAuthenticated ? (
-            <p className="text-center text-muted-foreground mt-4">
-              Log in to view all notes and manage them.
-            </p>
-          ) : (
+          {authStatus?.isAuthenticated ? (
             <div className="space-y-4">
               {notes?.map((note) => (
                 <div 
@@ -331,10 +340,28 @@ export default function Notes() {
                         onChange={(e) => setEditContent(e.target.value)}
                         className="min-h-[100px]"
                       />
+                      <Select
+                        value={note.folderId?.toString() ?? ""}
+                        onValueChange={(value) => {
+                          handleEdit(note.id, value ? parseInt(value) : null);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select folder" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No folder</SelectItem>
+                          {folders?.map((folder) => (
+                            <SelectItem key={folder.id} value={folder.id.toString()}>
+                              {folder.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <div className="flex space-x-2">
                         <Button
                           size="sm"
-                          onClick={() => handleEdit(note.id)}
+                          onClick={() => handleEdit(note.id, note.folderId)}
                           disabled={editNoteMutation.isPending}
                         >
                           {editNoteMutation.isPending ? (
@@ -398,7 +425,7 @@ export default function Notes() {
                 </p>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
